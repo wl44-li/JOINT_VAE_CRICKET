@@ -1,0 +1,15 @@
+name: jointvae
+channels:
+  - conda-forge
+dependencies:
+  - python=3.11
+  - numpy
+  - pandas
+  - scipy
+  - scikit-learn
+  - matplotlib
+  - pip
+  - pip:
+      - torch          # 2.x; pick the build for your CUDA version
+      - "zarr<3"       # the genotype stores are zarr v2
+      - numcodecs
