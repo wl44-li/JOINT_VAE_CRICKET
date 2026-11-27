@@ -1,0 +1,12 @@
+none_z16_h512x128_g10_c40	--z_dim 16 --hidden_dims 512,128 --gamma 10 --capacity_z 40 --model_seed 0
+none_z16_h512x128_g10_c40_s1	--z_dim 16 --hidden_dims 512,128 --gamma 10 --capacity_z 40 --model_seed 1
+none_z16_h512x128_g10_c40_s2	--z_dim 16 --hidden_dims 512,128 --gamma 10 --capacity_z 40 --model_seed 2
+none_z64_h256_g10_c40	--z_dim 64 --hidden_dims 256 --gamma 10 --capacity_z 40 --model_seed 0
+none_z64_h256_g10_c40_s1	--z_dim 64 --hidden_dims 256 --gamma 10 --capacity_z 40 --model_seed 1
+none_z64_h256_g10_c40_s2	--z_dim 64 --hidden_dims 256 --gamma 10 --capacity_z 40 --model_seed 2
+none_z128_h256_g10_c80	--z_dim 128 --hidden_dims 256 --gamma 10 --capacity_z 80 --model_seed 0
+none_z128_h256_g10_c80_s1	--z_dim 128 --hidden_dims 256 --gamma 10 --capacity_z 80 --model_seed 1
+none_z128_h256_g10_c80_s2	--z_dim 128 --hidden_dims 256 --gamma 10 --capacity_z 80 --model_seed 2
+none_z128_h512_g10_c80	--z_dim 128 --hidden_dims 512 --gamma 10 --capacity_z 80 --model_seed 0
+none_z128_h512_g10_c80_s1	--z_dim 128 --hidden_dims 512 --gamma 10 --capacity_z 80 --model_seed 1
+none_z128_h512_g10_c80_s2	--z_dim 128 --hidden_dims 512 --gamma 10 --capacity_z 80 --model_seed 2

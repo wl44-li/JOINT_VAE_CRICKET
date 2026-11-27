@@ -9,6 +9,7 @@ import argparse
 import json
 import os
 import random
+import time
 from dataclasses import asdict
 
 import numpy as np
@@ -131,15 +132,21 @@ def parse_args():
 
     parser.add_argument("--n_splits", type=int, default=5)
     parser.add_argument("--inner_val_fraction", type=float, default=0.125)
-    parser.add_argument("--seed", type=int, default=1024)
+    parser.add_argument("--seed", type=int, default=1024,
+                        help="Seed of the folds (and of the model when --model_seed is not given).")
+    parser.add_argument("--model_seed", type=int, default=None,
+                        help="Seed of the model initialisation and the training noise.")
     parser.add_argument("--batch_size", type=int, default=32)
     parser.add_argument("--max_epochs", type=int, default=400)
+    parser.add_argument("--lr", type=float, default=5e-4)
     parser.add_argument("--device", default=None)
 
     # Model.
     parser.add_argument("--n_categories", type=int, default=3)
     parser.add_argument("--z_dim", type=int, default=16)
     parser.add_argument("--dropout", type=float, default=0.1)
+    parser.add_argument("--hidden_dims", default="512,128",
+                        help="Widths of the encoder MLP (the decoder mirrors them).")
 
     # Loss weights.
     parser.add_argument("--gamma", type=float, default=1000.0,
@@ -157,7 +164,9 @@ def parse_args():
 
 
 def main(args):
-    set_seed(args.seed)
+    model_seed = args.seed if args.model_seed is None else args.model_seed
+
+    set_seed(model_seed)
     os.makedirs(args.save_dir, exist_ok=True)
 
     data_cfg = DataConfig(
@@ -174,11 +183,13 @@ def main(args):
         z_dim=args.z_dim,
         n_categories=args.n_categories,
         dropout=args.dropout,
+        hidden_dims=tuple(int(width) for width in args.hidden_dims.split(",")),
     )
 
     train_cfg = TrainConfig(
         batch_size=args.batch_size,
         max_epochs=args.max_epochs,
+        lr=args.lr,
         gamma_z=args.gamma,
         capacity_z=args.capacity_z,
         lambda_marginal=args.lambda_marginal,
@@ -193,6 +204,7 @@ def main(args):
             "model": asdict(model_cfg),
             "training": asdict(train_cfg),
             "device": device,
+            "model_seed": model_seed,
             "downstream": {
                 "classifier": "StandardScaler + LogisticRegression",
                 "C": 1.0,
@@ -235,12 +247,15 @@ def main(args):
         save_json(data.block_info, os.path.join(fold_dir, "block_info.json"))
 
         # Start each fold with the same seed and a fresh model and optimizer.
-        set_seed(args.seed)
+
+        set_seed(model_seed)
 
         model = JointVAE(data.input_dim, model_cfg)
         trainer = JointVAETrainer(model=model, cfg=train_cfg, device=device)
 
+        fit_start = time.time()
         trainer.fit(data.x_train, data.x_val)
+        fit_seconds = time.time() - fit_start
         trainer.restore_best_model()
 
         history = pd.DataFrame(trainer.history)
@@ -260,8 +275,13 @@ def main(args):
             "fold_id": fold_id,
             "best_epoch": trainer.best_epoch,
             "best_val_loss": trainer.best_val_loss,
+            "n_snps_used": data.x_train.shape[1],
+            "fit_seconds": fit_seconds,
             **trainer.evaluate(data.x_test),
-            **{f"val_{name}": value for name, value in trainer.evaluate(data.x_val).items()},
+            **{
+                f"val_{name}": value
+                for name, value in trainer.evaluate(data.x_val).items()
+            },
         }
 
         vae_rows.append(vae_row)
@@ -270,7 +290,7 @@ def main(args):
         latents = export_latents(data, trainer, fold_dir)
 
         # From here on labels are used; the model is no longer changed.
-        features = build_features(data, latents, seed=args.seed + fold_id, n_draws=args.n_draws)
+        features = build_features(data, latents, seed=model_seed + fold_id, n_draws=args.n_draws)
 
         test_results.append(evaluate_downstream(data, features, fold_id, fold_dir, "test"))
         val_results.append(evaluate_downstream(data, features, fold_id, fold_dir, "val"))
